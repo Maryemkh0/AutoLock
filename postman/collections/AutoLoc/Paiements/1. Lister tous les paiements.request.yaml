@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/paiements"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Statut 200 OK", function () {
+          pm.response.to.have.status(200);
+      });
+    language: text/javascript
+order: 1000

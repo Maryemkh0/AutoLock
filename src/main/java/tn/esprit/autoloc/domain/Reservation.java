@@ -2,10 +2,7 @@ package tn.esprit.autoloc.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import tn.esprit.autoloc.domain.enums.StatutReservation;
 
 import java.time.LocalDate;
@@ -16,6 +13,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Reservation {
 
     @Id
@@ -40,4 +38,8 @@ public class Reservation {
     @OneToOne(mappedBy = "reservation", fetch = FetchType.LAZY)
     @JsonIgnore
     private Contrat contrat;
+
+    public Long getId() {
+        return idReservation;
+    }
 }

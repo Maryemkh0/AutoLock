@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/contrats/{{contratId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "dateSignature": "2026-11-02",
+        "montantTotal": -100.00,
+        "valide": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Statut 400 Bad Request", function () {
+          pm.response.to.have.status(400);
+      });
+    language: text/javascript
+order: 7000

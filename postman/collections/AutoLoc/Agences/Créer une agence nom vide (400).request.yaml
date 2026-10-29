@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/agences"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nom": "",
+        "ville": "Sousse"
+    }
+order: 3000

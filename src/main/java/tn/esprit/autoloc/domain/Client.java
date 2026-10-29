@@ -37,4 +37,8 @@ public class Client {
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Reservation> reservations;
+
+    public Long getId() {
+        return idClient;
+    }
 }

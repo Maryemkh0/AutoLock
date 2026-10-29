@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/employes"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nom": "Belhadj",
+        "prenom": "Ali",
+        "role": "GESTIONNAIRE"
+    }
+order: 2000

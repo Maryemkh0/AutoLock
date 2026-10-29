@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/equipements"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "libelle": "Barres de toit",
+        "quantite": 4
+    }
+order: 2000

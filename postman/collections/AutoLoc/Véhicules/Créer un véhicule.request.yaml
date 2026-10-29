@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/vehicules"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "immatriculation": "220 TUN 8899",
+        "marque": "Volkswagen",
+        "modele": "Golf 8",
+        "categorie": "BERLINE",
+        "tarifJournalier": 160.00,
+        "statut": "DISPONIBLE"
+    }
+order: 2000

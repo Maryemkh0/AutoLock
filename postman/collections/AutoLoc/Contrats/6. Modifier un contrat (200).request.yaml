@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/contrats/{{contratId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "dateSignature": "2026-11-02",
+        "montantTotal": 520.00,
+        "valide": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Statut 200 OK", function () {
+          pm.response.to.have.status(200);
+      });
+      var jsonData = pm.response.json();
+      pm.test("Montant modifié", function () {
+          pm.expect(jsonData.montantTotal).to.eql(520.00);
+      });
+    language: text/javascript
+order: 6000

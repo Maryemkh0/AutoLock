@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/agences"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nom": "AutoLoc Sousse",
+        "ville": "Sousse",
+        "adresse": "Route Touristique",
+        "telephone": "73111222"
+    }
+order: 2000

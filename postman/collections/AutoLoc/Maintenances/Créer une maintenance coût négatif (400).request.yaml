@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/maintenances"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "dateDebut": "2026-11-01",
+        "dateFin": "2026-11-03",
+        "cout": -80.00
+    }
+order: 2000

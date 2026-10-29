@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/paiements"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "montant": 100.00,
+        "modePaiement": "CARTE"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Statut 405 Method Not Allowed", function () {
+          pm.response.to.have.status(405);
+      });
+    language: text/javascript
+order: 3000

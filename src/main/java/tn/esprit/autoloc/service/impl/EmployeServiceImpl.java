@@ -9,15 +9,75 @@ import tn.esprit.autoloc.exception.ResourceNotFoundException;
 import tn.esprit.autoloc.repository.IAgenceRepository;
 import tn.esprit.autoloc.repository.IEmployeRepository;
 import tn.esprit.autoloc.service.IEmployeService;
+import tn.esprit.autoloc.web.dto.EmployeDTO;
+import tn.esprit.autoloc.web.mapper.EmployeMapper;
 
 import java.util.List;
 
+/**
+ * Implémentation du service Employé (Atelier 7 - Section 1.4, 3.2, 3.4)
+ */
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class EmployeServiceImpl implements IEmployeService {
 
     private final IEmployeRepository employeRepository;
     private final IAgenceRepository agenceRepository;
+    private final EmployeMapper employeMapper;
+
+    // ─── Atelier 7 : Méthodes DTO (Section 3.1 & 3.4) ─────────────────────────
+
+    @Override
+    public EmployeDTO creer(EmployeDTO dto) {
+        Employe employe = employeMapper.toEntity(dto);
+        if (dto.getAgenceId() != null) {
+            Agence agence = agenceRepository.findById(dto.getAgenceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Agence introuvable, id=" + dto.getAgenceId()));
+            employe.setAgence(agence);
+        }
+        validerEmploye(employe);
+        Employe saved = employeRepository.save(employe);
+        return employeMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeDTO obtenirParId(Long id) {
+        Employe employe = employeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable, id=" + id));
+        return employeMapper.toDto(employe);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeDTO> listerTous() {
+        return employeRepository.findAll().stream()
+                .map(employeMapper::toDto)
+                .toList();
+    }
+
+    // ─── Atelier 7 : Affectation et désaffectation (Section 1.4) ──────────────
+
+    @Override
+    public void affecterEmployeAAgence(Long employeId, Long agenceId) {
+        Employe employe = employeRepository.findById(employeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable", employeId));
+        Agence agence = agenceRepository.findById(agenceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agence introuvable", agenceId));
+        employe.setAgence(agence);
+        employeRepository.save(employe);
+    }
+
+    @Override
+    public void desaffecterEmployeDeAgence(Long employeId) {
+        Employe employe = employeRepository.findById(employeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable", employeId));
+        employe.setAgence(null);
+        employeRepository.save(employe);
+    }
+
+    // ─── Méthodes héritées Atelier 4 ─────────────────────────────────────────
 
     @Override
     public Employe create(Employe employe) {
@@ -29,12 +89,14 @@ public class EmployeServiceImpl implements IEmployeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Employe findById(Long id) {
         return employeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable", id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Employe> findAll() {
         return employeRepository.findAll();
     }
@@ -62,28 +124,6 @@ public class EmployeServiceImpl implements IEmployeService {
             throw new ResourceNotFoundException("Employé introuvable", id);
         }
         employeRepository.deleteById(id);
-    }
-
-    // ─── Atelier 7 : Affectation et désaffectation avec Spring Data JPA ─────────
-
-    @Override
-    @Transactional
-    public void affecterEmployeAAgence(Long employeId, Long agenceId) {
-        Employe employe = employeRepository.findById(employeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable", employeId));
-        Agence agence = agenceRepository.findById(agenceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Agence introuvable", agenceId));
-        employe.setAgence(agence);
-        employeRepository.save(employe);
-    }
-
-    @Override
-    @Transactional
-    public void desaffecterEmployeDeAgence(Long employeId) {
-        Employe employe = employeRepository.findById(employeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable", employeId));
-        employe.setAgence(null);
-        employeRepository.save(employe);
     }
 
     private void validerEmploye(Employe employe) {

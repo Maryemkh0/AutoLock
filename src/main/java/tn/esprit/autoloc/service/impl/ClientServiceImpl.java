@@ -2,18 +2,53 @@ package tn.esprit.autoloc.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.autoloc.domain.Client;
 import tn.esprit.autoloc.exception.ResourceNotFoundException;
 import tn.esprit.autoloc.repository.IClientRepository;
 import tn.esprit.autoloc.service.IClientService;
+import tn.esprit.autoloc.web.dto.ClientDTO;
+import tn.esprit.autoloc.web.mapper.ClientMapper;
 
 import java.util.List;
 
+/**
+ * Implémentation du service Client (Atelier 7 - Section 3.2 & 3.4)
+ */
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ClientServiceImpl implements IClientService {
 
     private final IClientRepository clientRepository;
+    private final ClientMapper clientMapper;
+
+    // ─── Atelier 7 : Méthodes DTO ───────────────────────────────────────────
+
+    @Override
+    public ClientDTO creer(ClientDTO dto) {
+        Client client = clientMapper.toEntity(dto);
+        Client saved = clientRepository.save(client);
+        return clientMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ClientDTO obtenirParId(Long id) {
+        Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Client introuvable, id=" + id));
+        return clientMapper.toDto(client);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClientDTO> listerTous() {
+        return clientRepository.findAll().stream()
+                .map(clientMapper::toDto)
+                .toList();
+    }
+
+    // ─── Méthodes héritées Atelier 4 ─────────────────────────────────────────
 
     @Override
     public Client create(Client client) {
@@ -25,12 +60,14 @@ public class ClientServiceImpl implements IClientService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Client findById(Long id) {
         return clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Client> findAll() {
         return clientRepository.findAll();
     }
@@ -64,8 +101,11 @@ public class ClientServiceImpl implements IClientService {
         if (client.getNom() == null || client.getNom().trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom du client est obligatoire");
         }
+        if (client.getPrenom() == null || client.getPrenom().trim().isEmpty()) {
+            throw new IllegalArgumentException("Le prénom du client est obligatoire");
+        }
         if (client.getEmail() == null || client.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("L'e-mail du client est obligatoire");
+            throw new IllegalArgumentException("L'adresse email du client est obligatoire");
         }
     }
 }

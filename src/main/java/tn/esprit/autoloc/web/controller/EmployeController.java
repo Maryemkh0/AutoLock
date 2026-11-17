@@ -10,17 +10,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tn.esprit.autoloc.domain.Agence;
-import tn.esprit.autoloc.domain.Employe;
-import tn.esprit.autoloc.repository.IAgenceRepository;
 import tn.esprit.autoloc.service.IEmployeService;
 import tn.esprit.autoloc.web.dto.EmployeDTO;
-import tn.esprit.autoloc.web.mapper.EmployeMapper;
 
 import java.util.List;
 
 /**
- * Contrôleur REST Employés (Atelier 7 - Section 1.4, 3.3)
+ * Contrôleur REST Employés (Atelier 7 - Section 1.4, 3.3, 3.4)
  * Utilise EmployeDTO et expose les opérations d'affectation/désaffectation.
  */
 @RestController
@@ -30,17 +26,12 @@ import java.util.List;
 public class EmployeController {
 
     private final IEmployeService employeService;
-    private final IAgenceRepository agenceRepository;
-    private final EmployeMapper employeMapper;
 
     @Operation(summary = "Lister tous les employés")
     @ApiResponse(responseCode = "200", description = "Liste des employés récupérée avec succès")
     @GetMapping
     public ResponseEntity<List<EmployeDTO>> findAll() {
-        List<EmployeDTO> dtos = employeService.findAll().stream()
-                .map(employeMapper::toDto)
-                .toList();
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(employeService.listerTous());
     }
 
     @Operation(summary = "Consulter un employé par identifiant")
@@ -50,7 +41,7 @@ public class EmployeController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<EmployeDTO> findById(@Parameter(description = "Identifiant de l'employé") @PathVariable Long id) {
-        return ResponseEntity.ok(employeMapper.toDto(employeService.findById(id)));
+        return ResponseEntity.ok(employeService.obtenirParId(id));
     }
 
     @Operation(summary = "Créer un nouvel employé")
@@ -59,36 +50,9 @@ public class EmployeController {
             @ApiResponse(responseCode = "400", description = "Données invalides")
     })
     @PostMapping
-    public ResponseEntity<EmployeDTO> create(@Valid @RequestBody EmployeDTO dto) {
-        Employe employe = employeMapper.toEntity(dto);
-        if (dto.getAgenceId() != null) {
-            Agence agence = agenceRepository.findById(dto.getAgenceId()).orElse(null);
-            employe.setAgence(agence);
-        }
-        Employe saved = employeService.create(employe);
-        return ResponseEntity.status(HttpStatus.CREATED).body(employeMapper.toDto(saved));
-    }
-
-    @Operation(summary = "Modifier un employé existant")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Employé modifié avec succès"),
-            @ApiResponse(responseCode = "400", description = "Données invalides"),
-            @ApiResponse(responseCode = "404", description = "Employé introuvable")
-    })
-    @PutMapping("/{id}")
-    public ResponseEntity<EmployeDTO> update(
-            @Parameter(description = "Identifiant de l'employé") @PathVariable Long id,
-            @Valid @RequestBody EmployeDTO dto) {
-        Employe existant = employeService.findById(id);
-        existant.setNom(dto.getNom());
-        existant.setPrenom(dto.getPrenom());
-        existant.setRole(dto.getRole());
-        if (dto.getAgenceId() != null) {
-            existant.setAgence(agenceRepository.findById(dto.getAgenceId()).orElse(null));
-        }
-
-        Employe updated = employeService.update(id, existant);
-        return ResponseEntity.ok(employeMapper.toDto(updated));
+    public ResponseEntity<EmployeDTO> creer(@Valid @RequestBody EmployeDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(employeService.creer(dto));
     }
 
     @Operation(summary = "Supprimer un employé par identifiant")
@@ -100,30 +64,28 @@ public class EmployeController {
 
     // ─── Atelier 7 : Endpoints d'affectation et désaffectation (Section 1.4) ─────
 
-    @Operation(summary = "Affecter un employé à une agence")
+    @Operation(summary = "Affecter un employé à une agence (PUT)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Employé affecté avec succès"),
             @ApiResponse(responseCode = "404", description = "Employé ou agence introuvable")
     })
-    @PutMapping("/{employeId}/affecter-agence/{agenceId}")
+    @PutMapping(value = {"/{employeId}/affecter-agence/{agenceId}", "/{employeId}/agence/{agenceId}"})
     public ResponseEntity<EmployeDTO> affecterEmployeAAgence(
             @Parameter(description = "Identifiant de l'employé") @PathVariable Long employeId,
             @Parameter(description = "Identifiant de l'agence") @PathVariable Long agenceId) {
         employeService.affecterEmployeAAgence(employeId, agenceId);
-        Employe e = employeService.findById(employeId);
-        return ResponseEntity.ok(employeMapper.toDto(e));
+        return ResponseEntity.ok(employeService.obtenirParId(employeId));
     }
 
-    @Operation(summary = "Désaffecter un employé d'une agence")
+    @Operation(summary = "Désaffecter un employé d'une agence (PUT)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Employé désaffecté avec succès"),
             @ApiResponse(responseCode = "404", description = "Employé introuvable")
     })
-    @PutMapping("/{employeId}/desaffecter-agence")
+    @PutMapping(value = {"/{employeId}/desaffecter-agence", "/{employeId}/agence/desaffecter"})
     public ResponseEntity<EmployeDTO> desaffecterEmployeDeAgence(
             @Parameter(description = "Identifiant de l'employé") @PathVariable Long employeId) {
         employeService.desaffecterEmployeDeAgence(employeId);
-        Employe e = employeService.findById(employeId);
-        return ResponseEntity.ok(employeMapper.toDto(e));
+        return ResponseEntity.ok(employeService.obtenirParId(employeId));
     }
 }

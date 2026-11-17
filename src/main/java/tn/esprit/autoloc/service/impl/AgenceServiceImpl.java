@@ -2,24 +2,53 @@ package tn.esprit.autoloc.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.autoloc.domain.Agence;
-import tn.esprit.autoloc.domain.Employe;
-import tn.esprit.autoloc.domain.Vehicule;
 import tn.esprit.autoloc.exception.ResourceNotFoundException;
 import tn.esprit.autoloc.repository.IAgenceRepository;
-import tn.esprit.autoloc.repository.IEmployeRepository;
-import tn.esprit.autoloc.repository.IVehiculeRepository;
 import tn.esprit.autoloc.service.IAgenceService;
+import tn.esprit.autoloc.web.dto.AgenceDTO;
+import tn.esprit.autoloc.web.mapper.AgenceMapper;
 
 import java.util.List;
 
+/**
+ * Implémentation du service Agence (Atelier 7 - Section 3.2, Page 7)
+ */
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AgenceServiceImpl implements IAgenceService {
 
     private final IAgenceRepository agenceRepository;
-    private final IVehiculeRepository vehiculeRepository;
-    private final IEmployeRepository employeRepository;
+    private final AgenceMapper agenceMapper;
+
+    // ─── Atelier 7 : Méthodes DTO (Section 3.1 & 3.2) ─────────────────────────
+
+    @Override
+    public AgenceDTO creer(AgenceDTO dto) {
+        Agence agence = agenceMapper.toEntity(dto);
+        Agence saved = agenceRepository.save(agence);
+        return agenceMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AgenceDTO obtenirParId(Long id) {
+        Agence agence = agenceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agence introuvable, id=" + id));
+        return agenceMapper.toDto(agence);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AgenceDTO> listerToutes() {
+        return agenceRepository.findAll().stream()
+                .map(agenceMapper::toDto)
+                .toList();
+    }
+
+    // ─── Méthodes héritées Atelier 4 ─────────────────────────────────────────
 
     @Override
     public Agence create(Agence agence) {
@@ -31,12 +60,14 @@ public class AgenceServiceImpl implements IAgenceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Agence findById(Long id) {
         return agenceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agence", id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Agence> findAll() {
         return agenceRepository.findAll();
     }
@@ -62,52 +93,9 @@ public class AgenceServiceImpl implements IAgenceService {
         agenceRepository.deleteById(id);
     }
 
-    // ─── Méthodes d'affectation (Atelier 7) ──────────────────────────────────
-
-    @Override
-    public Agence affecterVehicule(Long idAgence, Long idVehicule) {
-        Agence agence = findById(idAgence);
-        Vehicule vehicule = vehiculeRepository.findById(idVehicule)
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicule", idVehicule));
-
-        vehicule.setAgence(agence);
-        vehiculeRepository.save(vehicule);
-        return agence;
-    }
-
-    @Override
-    public Agence retirerVehicule(Long idAgence, Long idVehicule) {
-        // Vérifie que l'agence existe
-        findById(idAgence);
-        Vehicule vehicule = vehiculeRepository.findById(idVehicule)
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicule", idVehicule));
-
-        if (vehicule.getAgence() == null || !vehicule.getAgence().getIdAgence().equals(idAgence)) {
-            throw new IllegalArgumentException(
-                    "Le véhicule " + idVehicule + " n'appartient pas à l'agence " + idAgence);
-        }
-        vehicule.setAgence(null);
-        vehiculeRepository.save(vehicule);
-        return findById(idAgence);
-    }
-
-    @Override
-    public Agence affecterEmploye(Long idAgence, Long idEmploye) {
-        Agence agence = findById(idAgence);
-        Employe employe = employeRepository.findById(idEmploye)
-                .orElseThrow(() -> new ResourceNotFoundException("Employe", idEmploye));
-
-        employe.setAgence(agence);
-        employeRepository.save(employe);
-        return agence;
-    }
-
-    // ─── Validation ───────────────────────────────────────────────────────────
-
     private void validerAgence(Agence agence) {
         if (agence.getNom() == null || agence.getNom().trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom de l'agence est obligatoire");
         }
     }
 }
-

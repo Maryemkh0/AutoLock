@@ -18,16 +18,14 @@ import tn.esprit.autoloc.domain.enums.ModePaiement;
 import tn.esprit.autoloc.domain.enums.RoleEmploye;
 import tn.esprit.autoloc.domain.enums.StatutVehicule;
 import tn.esprit.autoloc.exception.ResourceNotFoundException;
-import tn.esprit.autoloc.service.IAgenceService;
-import tn.esprit.autoloc.service.IClientService;
-import tn.esprit.autoloc.service.IEmployeService;
-import tn.esprit.autoloc.service.IVehiculeService;
+import tn.esprit.autoloc.service.*;
 import tn.esprit.autoloc.web.dto.*;
 import tn.esprit.autoloc.web.mapper.*;
 import tn.esprit.autoloc.web.validator.ReservationRequestValidator;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests d'intégration et unitaires pour l'Atelier 7 :
  * - Partie 1.5 : Contrôles et tests d'affectation / désaffectation / transfert
  * - Partie 2 : Mappers MapStruct
+ * - Partie 3 : Services utilisant les DTOs (creer, obtenirParId, listerTous)
  * - Partie 5.4 / 5.5 : Validateur personnalisé ReservationRequestValidator
  * - Partie 5.6 : Tests de validation Bean Validation
  */
@@ -56,6 +55,9 @@ class Atelier7Test {
     private IClientService clientService;
 
     @Autowired
+    private IReservationService reservationService;
+
+    @Autowired
     private AgenceMapper agenceMapper;
 
     @Autowired
@@ -65,18 +67,6 @@ class Atelier7Test {
     private ClientMapper clientMapper;
 
     @Autowired
-    private EmployeMapper employeMapper;
-
-    @Autowired
-    private ContratMapper contratMapper;
-
-    @Autowired
-    private PaiementMapper paiementMapper;
-
-    @Autowired
-    private ReservationMapper reservationMapper;
-
-    @Autowired
     private ReservationRequestValidator reservationRequestValidator;
 
     private static Validator validator;
@@ -84,6 +74,7 @@ class Atelier7Test {
     private static Long idAgence2;
     private static Long idVehicule;
     private static Long idEmploye;
+    private static Long idClient;
 
     @BeforeAll
     static void setUpValidator() {
@@ -118,7 +109,7 @@ class Atelier7Test {
         vehicule.setStatut(StatutVehicule.DISPONIBLE);
         idVehicule = vehiculeService.create(vehicule).getIdVehicule();
 
-        // Appel de la méthode demandée dans la Section 1.2 du TP
+        // Méthode demandée dans la Section 1.2 du TP
         vehiculeService.affecterVehiculeAAgence(idVehicule, idAgence1);
 
         Vehicule rechargé = vehiculeService.findById(idVehicule);
@@ -141,7 +132,7 @@ class Atelier7Test {
     @Order(3)
     @DisplayName("1.5.3 - Transfert d'un véhicule d'une agence vers une autre puis désaffectation")
     void testTransfertEtDesaffectationVehicule() {
-        // Transfert de agence 1 vers agence 2
+        // Transfert
         vehiculeService.affecterVehiculeAAgence(idVehicule, idAgence2);
         Vehicule transfere = vehiculeService.findById(idVehicule);
         assertEquals(idAgence2, transfere.getAgence().getIdAgence());
@@ -214,17 +205,80 @@ class Atelier7Test {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Partie 5.4 : Validateur Personnalisé ReservationRequestValidator
+    // Partie 3 : Services utilisant les DTOs (Section 3.1 & 3.2)
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
     @Order(6)
+    @DisplayName("3.2 - Service Agence avec DTO (creer, obtenirParId, listerToutes)")
+    void testAgenceServiceDTO() {
+        AgenceDTO dto = AgenceDTO.builder()
+                .nom("Agence Nabeul")
+                .ville("Nabeul")
+                .telephone("72223344")
+                .build();
+
+        AgenceDTO cree = agenceService.creer(dto);
+        assertNotNull(cree.getId());
+        assertEquals("Agence Nabeul", cree.getNom());
+
+        AgenceDTO trouve = agenceService.obtenirParId(cree.getId());
+        assertEquals("Nabeul", trouve.getVille());
+
+        List<AgenceDTO> liste = agenceService.listerToutes();
+        assertFalse(liste.isEmpty());
+    }
+
+    @Test
+    @Order(7)
+    @DisplayName("3.2 - Service Client avec DTO (creer, obtenirParId, listerTous)")
+    void testClientServiceDTO() {
+        ClientDTO dto = ClientDTO.builder()
+                .nom("Hammami")
+                .prenom("Sarra")
+                .email("sarra@email.com")
+                .numPermis("TN77889")
+                .build();
+
+        ClientDTO cree = clientService.creer(dto);
+        assertNotNull(cree.getId());
+        idClient = cree.getId();
+
+        ClientDTO trouve = clientService.obtenirParId(idClient);
+        assertEquals("Hammami", trouve.getNom());
+    }
+
+    @Test
+    @Order(8)
+    @DisplayName("3.2 & 5.5 - Service Réservation avec DTO (creer, obtenirParId, listerToutes)")
+    void testReservationServiceDTO() {
+        ReservationRequestDTO request = ReservationRequestDTO.builder()
+                .clientId(idClient)
+                .vehiculeId(idVehicule)
+                .dateDebut(LocalDate.now().plusDays(2))
+                .dateFin(LocalDate.now().plusDays(6))
+                .build();
+
+        ReservationResponseDTO response = reservationService.creer(request);
+        assertNotNull(response.getId());
+        assertEquals(idClient, response.getClientId());
+        assertEquals(idVehicule, response.getVehiculeId());
+        assertNotNull(response.getClientNomComplet());
+        assertEquals("111TU1111", response.getVehiculeImmatriculation());
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Partie 5.4 : Validateur Personnalisé ReservationRequestValidator
+    // ──────────────────────────────────────────────────────────────────────────
+
+    @Test
+    @Order(9)
     @DisplayName("5.4/5.6 - Validateur personnalisé : date de début passée")
     void testValidatorDateDebutPassee() {
         ReservationRequestDTO dto = ReservationRequestDTO.builder()
                 .clientId(1L)
                 .vehiculeId(1L)
-                .dateDebut(LocalDate.now().minusDays(2)) // Passée !
+                .dateDebut(LocalDate.now().minusDays(2))
                 .dateFin(LocalDate.now().plusDays(2))
                 .build();
 
@@ -236,14 +290,14 @@ class Atelier7Test {
     }
 
     @Test
-    @Order(7)
+    @Order(10)
     @DisplayName("5.4/5.6 - Validateur personnalisé : date de fin antérieure ou égale à date de début")
     void testValidatorDatesInvalides() {
         ReservationRequestDTO dto = ReservationRequestDTO.builder()
                 .clientId(1L)
                 .vehiculeId(1L)
                 .dateDebut(LocalDate.now().plusDays(5))
-                .dateFin(LocalDate.now().plusDays(3)) // Antérieure !
+                .dateFin(LocalDate.now().plusDays(3))
                 .build();
 
         Errors errors = new BeanPropertyBindingResult(dto, "reservationRequestDTO");
@@ -254,7 +308,7 @@ class Atelier7Test {
     }
 
     @Test
-    @Order(8)
+    @Order(11)
     @DisplayName("5.4/5.6 - Validateur personnalisé : dates cohérentes -> aucune erreur")
     void testValidatorDatesValides() {
         ReservationRequestDTO dto = ReservationRequestDTO.builder()
@@ -275,13 +329,13 @@ class Atelier7Test {
     // ──────────────────────────────────────────────────────────────────────────
 
     @Test
-    @Order(9)
+    @Order(12)
     @DisplayName("5.6.1 - Client avec email invalide : rejeté par Bean Validation")
     void testValidationClientEmailInvalide() {
         ClientDTO dto = ClientDTO.builder()
                 .nom("Gharbi")
                 .prenom("Fatma")
-                .email("email-invalide") // Email invalide !
+                .email("email-invalide")
                 .build();
 
         Set<ConstraintViolation<ClientDTO>> violations = validator.validate(dto);
@@ -290,11 +344,11 @@ class Atelier7Test {
     }
 
     @Test
-    @Order(10)
+    @Order(13)
     @DisplayName("5.6.2 - Véhicule sans immatriculation : rejeté par Bean Validation")
     void testValidationVehiculeSansImmatriculation() {
         VehiculeDTO dto = VehiculeDTO.builder()
-                .immatriculation("") // Vide !
+                .immatriculation("")
                 .marque("Volkswagen")
                 .modele("Golf")
                 .categorie(CategorieVehicule.BERLINE)
@@ -307,11 +361,11 @@ class Atelier7Test {
     }
 
     @Test
-    @Order(11)
+    @Order(14)
     @DisplayName("5.6.3 - Paiement avec montant nul ou négatif : rejeté par Bean Validation")
     void testValidationPaiementMontantNegatif() {
         PaiementDTO dto = PaiementDTO.builder()
-                .montant(new BigDecimal("-10.00")) // Négatif !
+                .montant(new BigDecimal("-10.00"))
                 .modePaiement(ModePaiement.CARTE)
                 .contratId(1L)
                 .build();
@@ -322,13 +376,13 @@ class Atelier7Test {
     }
 
     @Test
-    @Order(12)
+    @Order(15)
     @DisplayName("5.6.4 - Réservation sans dates : rejeté par Bean Validation")
     void testValidationReservationSansDates() {
         ReservationRequestDTO dto = ReservationRequestDTO.builder()
                 .clientId(1L)
                 .vehiculeId(1L)
-                .dateDebut(null) // Nulle !
+                .dateDebut(null)
                 .dateFin(null)
                 .build();
 

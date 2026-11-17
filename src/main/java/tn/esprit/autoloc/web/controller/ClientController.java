@@ -10,16 +10,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tn.esprit.autoloc.domain.Client;
 import tn.esprit.autoloc.service.IClientService;
 import tn.esprit.autoloc.web.dto.ClientDTO;
-import tn.esprit.autoloc.web.mapper.ClientMapper;
 
 import java.util.List;
 
 /**
- * Contrôleur REST Clients (Atelier 7 - Section 3.3, 5.2)
- * Utilise ClientDTO avec validation sur nom, prénom, email.
+ * Contrôleur REST Clients (Atelier 7 - Section 3.3 & 3.4)
+ * Utilise ClientDTO avec validation Bean Validation.
  */
 @RestController
 @RequestMapping("/clients")
@@ -28,16 +26,12 @@ import java.util.List;
 public class ClientController {
 
     private final IClientService clientService;
-    private final ClientMapper clientMapper;
 
     @Operation(summary = "Lister tous les clients")
     @ApiResponse(responseCode = "200", description = "Liste des clients récupérée avec succès")
     @GetMapping
     public ResponseEntity<List<ClientDTO>> findAll() {
-        List<ClientDTO> dtos = clientService.findAll().stream()
-                .map(clientMapper::toDto)
-                .toList();
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(clientService.listerTous());
     }
 
     @Operation(summary = "Consulter un client par identifiant")
@@ -47,7 +41,7 @@ public class ClientController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<ClientDTO> findById(@Parameter(description = "Identifiant du client") @PathVariable Long id) {
-        return ResponseEntity.ok(clientMapper.toDto(clientService.findById(id)));
+        return ResponseEntity.ok(clientService.obtenirParId(id));
     }
 
     @Operation(summary = "Créer un nouveau client")
@@ -56,33 +50,9 @@ public class ClientController {
             @ApiResponse(responseCode = "400", description = "Données invalides")
     })
     @PostMapping
-    public ResponseEntity<ClientDTO> create(@Valid @RequestBody ClientDTO dto) {
-        Client client = clientMapper.toEntity(dto);
-        Client saved = clientService.create(client);
-        return ResponseEntity.status(HttpStatus.CREATED).body(clientMapper.toDto(saved));
-    }
-
-    @Operation(summary = "Modifier un client existant")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Client modifié avec succès"),
-            @ApiResponse(responseCode = "400", description = "Données invalides"),
-            @ApiResponse(responseCode = "404", description = "Client introuvable")
-    })
-    @PutMapping("/{id}")
-    public ResponseEntity<ClientDTO> update(
-            @Parameter(description = "Identifiant du client") @PathVariable Long id,
-            @Valid @RequestBody ClientDTO dto) {
-        Client existant = clientService.findById(id);
-        existant.setNom(dto.getNom());
-        existant.setPrenom(dto.getPrenom());
-        existant.setEmail(dto.getEmail());
-        existant.setTelephone(dto.getTelephone());
-        existant.setNumPermis(dto.getNumPermis());
-        if (dto.getDateInscription() != null) {
-            existant.setDateInscription(dto.getDateInscription());
-        }
-        Client updated = clientService.update(id, existant);
-        return ResponseEntity.ok(clientMapper.toDto(updated));
+    public ResponseEntity<ClientDTO> creer(@Valid @RequestBody ClientDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(clientService.creer(dto));
     }
 
     @Operation(summary = "Supprimer un client par identifiant")

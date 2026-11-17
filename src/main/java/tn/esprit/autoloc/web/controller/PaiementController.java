@@ -10,12 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.service.IPaiementService;
 import tn.esprit.autoloc.web.dto.PaiementDTO;
-import tn.esprit.autoloc.web.mapper.PaiementMapper;
 
 import java.util.List;
 
 /**
- * Contrôleur REST Paiements (Atelier 7 - Section 3.4)
+ * Contrôleur REST Paiements (Atelier 7 - Section 3.3 & 3.4)
  * Utilise PaiementDTO pour toutes les sorties.
  */
 @RestController
@@ -25,16 +24,12 @@ import java.util.List;
 public class PaiementController {
 
     private final IPaiementService paiementService;
-    private final PaiementMapper paiementMapper;
 
     @Operation(summary = "Lister tous les paiements")
     @ApiResponse(responseCode = "200", description = "Liste des paiements récupérée avec succès")
     @GetMapping
     public ResponseEntity<List<PaiementDTO>> findAll() {
-        List<PaiementDTO> dtos = paiementService.findAll().stream()
-                .map(paiementMapper::toDto)
-                .toList();
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(paiementService.listerTous());
     }
 
     @Operation(summary = "Consulter un paiement par identifiant")
@@ -44,6 +39,6 @@ public class PaiementController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<PaiementDTO> findById(@Parameter(description = "Identifiant du paiement") @PathVariable Long id) {
-        return ResponseEntity.ok(paiementMapper.toDto(paiementService.findById(id)));
+        return ResponseEntity.ok(paiementService.obtenirParId(id));
     }
 }

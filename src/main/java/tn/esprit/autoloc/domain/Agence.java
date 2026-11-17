@@ -36,4 +36,8 @@ public class Agence {
     @OneToMany(mappedBy = "agence", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Employe> employes;
+
+    public Long getId() {
+        return idAgence;
+    }
 }

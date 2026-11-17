@@ -1,22 +1,20 @@
 package tn.esprit.autoloc.web.mapper;
 
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import tn.esprit.autoloc.domain.Client;
 import tn.esprit.autoloc.web.dto.ClientDTO;
 
 /**
- * Mapper MapStruct : ClientDTO <-> Client
+ * Mapper MapStruct : ClientDTO <-> Client (Atelier 7 - Section 2.5)
  */
 @Mapper(componentModel = "spring")
 public interface ClientMapper {
 
-    @Mapping(target = "idClient", ignore = true)
-    @Mapping(target = "reservations", ignore = true)
-    Client toEntity(ClientDTO dto);
-
+    @Mapping(target = "id", source = "idClient")
     ClientDTO toDto(Client client);
 
-    @Mapping(target = "idClient", ignore = true)
+    @Mapping(target = "idClient", source = "id")
     @Mapping(target = "reservations", ignore = true)
-    void updateEntityFromDto(ClientDTO dto, @MappingTarget Client client);
+    Client toEntity(ClientDTO dto);
 }

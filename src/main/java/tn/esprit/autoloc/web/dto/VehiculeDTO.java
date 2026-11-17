@@ -1,44 +1,45 @@
 package tn.esprit.autoloc.web.dto;
 
-import jakarta.validation.constraints.*;
-import lombok.Data;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.*;
 import tn.esprit.autoloc.domain.enums.CategorieVehicule;
 import tn.esprit.autoloc.domain.enums.StatutVehicule;
 
 import java.math.BigDecimal;
 
 /**
- * DTO pour la création/modification d'un véhicule.
- * Sépare les données de l'API de l'entité JPA.
- * Les annotations Bean Validation remplacent les vérifications manuelles.
+ * DTO Véhicule (Atelier 7 - Tableau 2.3 et 5.2)
  */
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class VehiculeDTO {
 
+    private Long id;
+
     @NotBlank(message = "L'immatriculation est obligatoire")
-    @Pattern(regexp = "[A-Z0-9\\-]{4,10}", message = "Format d'immatriculation invalide (ex: 123TU1234)")
     private String immatriculation;
 
     @NotBlank(message = "La marque est obligatoire")
-    @Size(min = 2, max = 50, message = "La marque doit avoir entre 2 et 50 caractères")
     private String marque;
 
     @NotBlank(message = "Le modèle est obligatoire")
-    @Size(min = 1, max = 50, message = "Le modèle doit avoir entre 1 et 50 caractères")
     private String modele;
 
     @NotNull(message = "La catégorie est obligatoire")
     private CategorieVehicule categorie;
 
     @NotNull(message = "Le tarif journalier est obligatoire")
-    @DecimalMin(value = "0.0", inclusive = true, message = "Le tarif journalier ne peut pas être négatif")
+    @Positive(message = "Le tarif journalier doit être strictement positif")
     private BigDecimal tarifJournalier;
 
-    @PositiveOrZero(message = "Le kilométrage ne peut pas être négatif")
     private Integer kilometrage;
 
     private StatutVehicule statut;
 
-    /** Identifiant de l'agence à laquelle affecter le véhicule (optionnel) */
-    private Long idAgence;
+    private Long agenceId;
 }

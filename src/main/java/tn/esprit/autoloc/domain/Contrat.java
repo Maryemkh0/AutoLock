@@ -35,4 +35,8 @@ public class Contrat {
     @OneToMany(mappedBy = "contrat", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference("contrat-paiements")
     private List<Paiement> paiements = new ArrayList<>();
+
+    public Long getId() {
+        return idContrat;
+    }
 }

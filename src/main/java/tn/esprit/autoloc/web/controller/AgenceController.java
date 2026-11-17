@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Agence;
 import tn.esprit.autoloc.service.IAgenceService;
@@ -16,6 +17,10 @@ import tn.esprit.autoloc.web.mapper.AgenceMapper;
 
 import java.util.List;
 
+/**
+ * Contrôleur REST Agences (Atelier 7 - Section 3.3)
+ * Utilise AgenceDTO pour toutes les entrées et sorties.
+ */
 @RestController
 @RequestMapping("/agences")
 @RequiredArgsConstructor
@@ -28,11 +33,11 @@ public class AgenceController {
     @Operation(summary = "Lister toutes les agences")
     @ApiResponse(responseCode = "200", description = "Liste des agences récupérée avec succès")
     @GetMapping
-    public List<AgenceDTO> findAll() {
-        return agenceService.findAll()
-                .stream()
+    public ResponseEntity<List<AgenceDTO>> findAll() {
+        List<AgenceDTO> dtos = agenceService.findAll().stream()
                 .map(agenceMapper::toDto)
                 .toList();
+        return ResponseEntity.ok(dtos);
     }
 
     @Operation(summary = "Consulter une agence par identifiant")
@@ -41,20 +46,20 @@ public class AgenceController {
             @ApiResponse(responseCode = "404", description = "Agence introuvable")
     })
     @GetMapping("/{id}")
-    public AgenceDTO findById(@Parameter(description = "Identifiant de l'agence") @PathVariable Long id) {
-        return agenceMapper.toDto(agenceService.findById(id));
+    public ResponseEntity<AgenceDTO> findById(@Parameter(description = "Identifiant de l'agence") @PathVariable Long id) {
+        return ResponseEntity.ok(agenceMapper.toDto(agenceService.findById(id)));
     }
 
     @Operation(summary = "Créer une nouvelle agence")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Agence créée avec succès"),
-            @ApiResponse(responseCode = "400", description = "Données invalides (validation échouée)")
+            @ApiResponse(responseCode = "400", description = "Données invalides")
     })
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public AgenceDTO create(@Valid @RequestBody AgenceDTO dto) {
+    public ResponseEntity<AgenceDTO> creer(@Valid @RequestBody AgenceDTO dto) {
         Agence agence = agenceMapper.toEntity(dto);
-        return agenceMapper.toDto(agenceService.create(agence));
+        Agence saved = agenceService.create(agence);
+        return ResponseEntity.status(HttpStatus.CREATED).body(agenceMapper.toDto(saved));
     }
 
     @Operation(summary = "Modifier une agence existante")
@@ -64,62 +69,22 @@ public class AgenceController {
             @ApiResponse(responseCode = "404", description = "Agence introuvable")
     })
     @PutMapping("/{id}")
-    public AgenceDTO update(
+    public ResponseEntity<AgenceDTO> update(
             @Parameter(description = "Identifiant de l'agence") @PathVariable Long id,
             @Valid @RequestBody AgenceDTO dto) {
-        Agence agence = agenceMapper.toEntity(dto);
-        return agenceMapper.toDto(agenceService.update(id, agence));
+        Agence existante = agenceService.findById(id);
+        existante.setNom(dto.getNom());
+        existante.setVille(dto.getVille());
+        existante.setAdresse(dto.getAdresse());
+        existante.setTelephone(dto.getTelephone());
+        Agence updated = agenceService.update(id, existante);
+        return ResponseEntity.ok(agenceMapper.toDto(updated));
     }
 
     @Operation(summary = "Supprimer une agence par identifiant")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Agence supprimée avec succès"),
-            @ApiResponse(responseCode = "404", description = "Agence introuvable")
-    })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteById(@Parameter(description = "Identifiant de l'agence") @PathVariable Long id) {
         agenceService.deleteById(id);
-    }
-
-    // ─── Endpoints d'affectation (Atelier 7) ─────────────────────────────────
-
-    @Operation(summary = "Affecter un véhicule à une agence",
-               description = "Lie un véhicule existant à une agence existante")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Véhicule affecté avec succès"),
-            @ApiResponse(responseCode = "404", description = "Agence ou véhicule introuvable")
-    })
-    @PutMapping("/{idAgence}/vehicules/{idVehicule}")
-    public AgenceDTO affecterVehicule(
-            @Parameter(description = "Identifiant de l'agence") @PathVariable Long idAgence,
-            @Parameter(description = "Identifiant du véhicule") @PathVariable Long idVehicule) {
-        return agenceMapper.toDto(agenceService.affecterVehicule(idAgence, idVehicule));
-    }
-
-    @Operation(summary = "Retirer un véhicule d'une agence")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Véhicule retiré avec succès"),
-            @ApiResponse(responseCode = "400", description = "Le véhicule n'appartient pas à cette agence"),
-            @ApiResponse(responseCode = "404", description = "Agence ou véhicule introuvable")
-    })
-    @DeleteMapping("/{idAgence}/vehicules/{idVehicule}")
-    public AgenceDTO retirerVehicule(
-            @Parameter(description = "Identifiant de l'agence") @PathVariable Long idAgence,
-            @Parameter(description = "Identifiant du véhicule") @PathVariable Long idVehicule) {
-        return agenceMapper.toDto(agenceService.retirerVehicule(idAgence, idVehicule));
-    }
-
-    @Operation(summary = "Affecter un employé à une agence",
-               description = "Lie un employé existant à une agence existante")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Employé affecté avec succès"),
-            @ApiResponse(responseCode = "404", description = "Agence ou employé introuvable")
-    })
-    @PutMapping("/{idAgence}/employes/{idEmploye}")
-    public AgenceDTO affecterEmploye(
-            @Parameter(description = "Identifiant de l'agence") @PathVariable Long idAgence,
-            @Parameter(description = "Identifiant de l'employé") @PathVariable Long idEmploye) {
-        return agenceMapper.toDto(agenceService.affecterEmploye(idAgence, idEmploye));
     }
 }

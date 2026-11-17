@@ -2,8 +2,11 @@ package tn.esprit.autoloc.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import tn.esprit.autoloc.domain.Agence;
 import tn.esprit.autoloc.domain.Vehicule;
 import tn.esprit.autoloc.exception.ResourceNotFoundException;
+import tn.esprit.autoloc.repository.IAgenceRepository;
 import tn.esprit.autoloc.repository.IVehiculeRepository;
 import tn.esprit.autoloc.service.IVehiculeService;
 
@@ -15,6 +18,7 @@ import java.util.List;
 public class VehiculeServiceImpl implements IVehiculeService {
 
     private final IVehiculeRepository vehiculeRepository;
+    private final IAgenceRepository agenceRepository;
 
     @Override
     public Vehicule create(Vehicule vehicule) {
@@ -28,7 +32,7 @@ public class VehiculeServiceImpl implements IVehiculeService {
     @Override
     public Vehicule findById(Long id) {
         return vehiculeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicule", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Véhicule introuvable", id));
     }
 
     @Override
@@ -64,9 +68,31 @@ public class VehiculeServiceImpl implements IVehiculeService {
     @Override
     public void deleteById(Long id) {
         if (!vehiculeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Vehicule", id);
+            throw new ResourceNotFoundException("Véhicule introuvable", id);
         }
         vehiculeRepository.deleteById(id);
+    }
+
+    // ─── Atelier 7 : Affectation et désaffectation avec Spring Data JPA ─────────
+
+    @Override
+    @Transactional
+    public void affecterVehiculeAAgence(Long vehiculeId, Long agenceId) {
+        Vehicule vehicule = vehiculeRepository.findById(vehiculeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Véhicule introuvable", vehiculeId));
+        Agence agence = agenceRepository.findById(agenceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agence introuvable", agenceId));
+        vehicule.setAgence(agence);
+        vehiculeRepository.save(vehicule);
+    }
+
+    @Override
+    @Transactional
+    public void desaffecterVehiculeDeAgence(Long vehiculeId) {
+        Vehicule vehicule = vehiculeRepository.findById(vehiculeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Véhicule introuvable", vehiculeId));
+        vehicule.setAgence(null);
+        vehiculeRepository.save(vehicule);
     }
 
     private void validerVehicule(Vehicule vehicule) {

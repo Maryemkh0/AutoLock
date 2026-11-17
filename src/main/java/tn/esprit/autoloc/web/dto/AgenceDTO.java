@@ -1,24 +1,26 @@
 package tn.esprit.autoloc.web.dto;
 
-import jakarta.validation.constraints.*;
-import lombok.Data;
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
 
 /**
- * DTO pour la création/modification d'une agence.
+ * DTO Agence (Atelier 7 - Tableau 2.3 et 5.2)
  */
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class AgenceDTO {
 
-    @NotBlank(message = "Le nom de l'agence est obligatoire")
-    @Size(min = 2, max = 100, message = "Le nom doit avoir entre 2 et 100 caractères")
+    private Long id;
+
+    @NotBlank(message = "Le nom est obligatoire")
     private String nom;
 
     @NotBlank(message = "La ville est obligatoire")
     private String ville;
 
-    @Size(max = 200, message = "L'adresse ne peut pas dépasser 200 caractères")
     private String adresse;
-
-    @Pattern(regexp = "\\+?[0-9\\s\\-]{8,15}", message = "Numéro de téléphone invalide")
     private String telephone;
 }

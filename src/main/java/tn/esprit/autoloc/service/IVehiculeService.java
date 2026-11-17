@@ -9,4 +9,10 @@ public interface IVehiculeService {
     List<Vehicule> findAll();
     Vehicule update(Long id, Vehicule entite);
     void deleteById(Long id);
+
+    /** Atelier 7 - Affectation d'un véhicule à une agence */
+    void affecterVehiculeAAgence(Long vehiculeId, Long agenceId);
+
+    /** Atelier 7 - Désaffectation d'un véhicule d'une agence */
+    void desaffecterVehiculeDeAgence(Long vehiculeId);
 }

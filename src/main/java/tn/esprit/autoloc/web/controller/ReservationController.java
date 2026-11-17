@@ -8,37 +8,49 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.autoloc.domain.Client;
 import tn.esprit.autoloc.domain.Reservation;
 import tn.esprit.autoloc.domain.Vehicule;
-import tn.esprit.autoloc.service.IClientService;
-import tn.esprit.autoloc.service.IReservationService;
-import tn.esprit.autoloc.service.IVehiculeService;
-import tn.esprit.autoloc.web.dto.ReservationDTO;
+import tn.esprit.autoloc.domain.enums.StatutReservation;
+import tn.esprit.autoloc.exception.ResourceNotFoundException;
+import tn.esprit.autoloc.repository.IClientRepository;
+import tn.esprit.autoloc.repository.IReservationRepository;
+import tn.esprit.autoloc.repository.IVehiculeRepository;
+import tn.esprit.autoloc.web.dto.ReservationRequestDTO;
+import tn.esprit.autoloc.web.dto.ReservationResponseDTO;
 import tn.esprit.autoloc.web.mapper.ReservationMapper;
+import tn.esprit.autoloc.web.validator.ReservationRequestValidator;
 
 import java.util.List;
 
+/**
+ * Contrôleur REST Réservations (Atelier 7 - Section 3.3, 5.4, 5.5)
+ * Utilise ReservationRequestDTO en entrée et ReservationResponseDTO en sortie.
+ * Intègre le validateur personnalisé ReservationRequestValidator.
+ */
 @RestController
 @RequestMapping("/reservations")
 @RequiredArgsConstructor
-@Tag(name = "Réservations", description = "Gestion des réservations")
+@Tag(name = "Réservations", description = "Gestion des réservations AutoLoc")
 public class ReservationController {
 
-    private final IReservationService reservationService;
-    private final IClientService clientService;
-    private final IVehiculeService vehiculeService;
+    private final IReservationRepository reservationRepository;
+    private final IClientRepository clientRepository;
+    private final IVehiculeRepository vehiculeRepository;
     private final ReservationMapper reservationMapper;
+    private final ReservationRequestValidator reservationRequestValidator;
 
     @Operation(summary = "Lister toutes les réservations")
     @ApiResponse(responseCode = "200", description = "Liste des réservations récupérée avec succès")
     @GetMapping
-    public List<ReservationDTO> findAll() {
-        return reservationService.findAll()
-                .stream()
+    public ResponseEntity<List<ReservationResponseDTO>> findAll() {
+        List<ReservationResponseDTO> dtos = reservationRepository.findAll().stream()
                 .map(reservationMapper::toDto)
                 .toList();
+        return ResponseEntity.ok(dtos);
     }
 
     @Operation(summary = "Consulter une réservation par identifiant")
@@ -47,65 +59,92 @@ public class ReservationController {
             @ApiResponse(responseCode = "404", description = "Réservation introuvable")
     })
     @GetMapping("/{id}")
-    public ReservationDTO findById(
+    public ResponseEntity<ReservationResponseDTO> findById(
             @Parameter(description = "Identifiant de la réservation") @PathVariable Long id) {
-        return reservationMapper.toDto(reservationService.findById(id));
+        Reservation reservation = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Réservation introuvable", id));
+        return ResponseEntity.ok(reservationMapper.toDto(reservation));
     }
 
-    @Operation(summary = "Créer une nouvelle réservation",
-               description = "Résout automatiquement le client et le véhicule via leurs identifiants")
+    @Operation(summary = "Créer une réservation avec validation personnalisée",
+               description = "Valide Bean Validation puis ReservationRequestValidator avant d'enregistrer")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Réservation créée avec succès"),
-            @ApiResponse(responseCode = "400", description = "Données invalides ou date de fin antérieure"),
+            @ApiResponse(responseCode = "400", description = "Erreur de validation des champs ou des dates"),
             @ApiResponse(responseCode = "404", description = "Client ou véhicule introuvable")
     })
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ReservationDTO create(@Valid @RequestBody ReservationDTO dto) {
-        Reservation reservation = reservationMapper.toEntity(dto);
+    public ResponseEntity<?> creer(
+            @Valid @RequestBody ReservationRequestDTO dto,
+            BindingResult result) {
 
-        // Résolution des associations via les IDs
-        Client client = clientService.findById(dto.getIdClient());
-        Vehicule vehicule = vehiculeService.findById(dto.getIdVehicule());
+        // Appel explicite du validateur personnalisé (Section 5.5)
+        reservationRequestValidator.validate(dto, result);
+
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(
+                    result.getFieldErrors().stream()
+                            .map(error -> error.getField() + " : " + error.getDefaultMessage())
+                            .toList()
+            );
+        }
+
+        Client client = clientRepository.findById(dto.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client introuvable", dto.getClientId()));
+        Vehicule vehicule = vehiculeRepository.findById(dto.getVehiculeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Véhicule introuvable", dto.getVehiculeId()));
+
+        Reservation reservation = reservationMapper.toEntity(dto);
         reservation.setClient(client);
         reservation.setVehicule(vehicule);
+        if (reservation.getStatut() == null) {
+            reservation.setStatut(StatutReservation.EN_ATTENTE);
+        }
 
-        return reservationMapper.toDto(reservationService.create(reservation));
+        Reservation saved = reservationRepository.save(reservation);
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservationMapper.toDto(saved));
     }
 
     @Operation(summary = "Modifier une réservation existante")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Réservation modifiée avec succès"),
-            @ApiResponse(responseCode = "400", description = "Données invalides"),
-            @ApiResponse(responseCode = "404", description = "Réservation, client ou véhicule introuvable")
-    })
     @PutMapping("/{id}")
-    public ReservationDTO update(
+    public ResponseEntity<?> update(
             @Parameter(description = "Identifiant de la réservation") @PathVariable Long id,
-            @Valid @RequestBody ReservationDTO dto) {
+            @Valid @RequestBody ReservationRequestDTO dto,
+            BindingResult result) {
 
-        Reservation existante = reservationService.findById(id);
-        reservationMapper.updateEntityFromDto(dto, existante);
-
-        if (dto.getIdClient() != null) {
-            existante.setClient(clientService.findById(dto.getIdClient()));
+        reservationRequestValidator.validate(dto, result);
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(
+                    result.getFieldErrors().stream()
+                            .map(error -> error.getField() + " : " + error.getDefaultMessage())
+                            .toList()
+            );
         }
-        if (dto.getIdVehicule() != null) {
-            existante.setVehicule(vehiculeService.findById(dto.getIdVehicule()));
-        }
 
-        return reservationMapper.toDto(reservationService.update(id, existante));
+        Reservation existante = reservationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Réservation introuvable", id));
+
+        Client client = clientRepository.findById(dto.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client introuvable", dto.getClientId()));
+        Vehicule vehicule = vehiculeRepository.findById(dto.getVehiculeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Véhicule introuvable", dto.getVehiculeId()));
+
+        existante.setDateDebut(dto.getDateDebut());
+        existante.setDateFin(dto.getDateFin());
+        existante.setClient(client);
+        existante.setVehicule(vehicule);
+
+        Reservation saved = reservationRepository.save(existante);
+        return ResponseEntity.ok(reservationMapper.toDto(saved));
     }
 
-    @Operation(summary = "Supprimer une réservation par identifiant")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Réservation supprimée avec succès"),
-            @ApiResponse(responseCode = "404", description = "Réservation introuvable")
-    })
+    @Operation(summary = "Supprimer une réservation")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteById(
-            @Parameter(description = "Identifiant de la réservation") @PathVariable Long id) {
-        reservationService.deleteById(id);
+    public void deleteById(@Parameter(description = "Identifiant de la réservation") @PathVariable Long id) {
+        if (!reservationRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Réservation introuvable", id);
+        }
+        reservationRepository.deleteById(id);
     }
 }

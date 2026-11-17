@@ -59,4 +59,8 @@ public class Vehicule {
     )
     @JsonIgnore
     private List<Equipement> equipements;
+
+    public Long getId() {
+        return idVehicule;
+    }
 }

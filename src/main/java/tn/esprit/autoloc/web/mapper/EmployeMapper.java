@@ -1,23 +1,21 @@
 package tn.esprit.autoloc.web.mapper;
 
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import tn.esprit.autoloc.domain.Employe;
 import tn.esprit.autoloc.web.dto.EmployeDTO;
 
 /**
- * Mapper MapStruct : EmployeDTO <-> Employe
+ * Mapper MapStruct : EmployeDTO <-> Employe (Atelier 7 - Section 2.5)
  */
 @Mapper(componentModel = "spring")
 public interface EmployeMapper {
 
-    @Mapping(target = "idEmploye", ignore = true)
-    @Mapping(target = "agence", ignore = true)
-    Employe toEntity(EmployeDTO dto);
-
-    @Mapping(target = "idAgence", source = "agence.idAgence")
+    @Mapping(target = "id", source = "idEmploye")
+    @Mapping(target = "agenceId", source = "agence.idAgence")
     EmployeDTO toDto(Employe employe);
 
-    @Mapping(target = "idEmploye", ignore = true)
+    @Mapping(target = "idEmploye", source = "id")
     @Mapping(target = "agence", ignore = true)
-    void updateEntityFromDto(EmployeDTO dto, @MappingTarget Employe employe);
+    Employe toEntity(EmployeDTO dto);
 }

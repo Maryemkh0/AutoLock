@@ -29,4 +29,8 @@ public class Employe {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_agence")
     private Agence agence;
+
+    public Long getId() {
+        return idEmploye;
+    }
 }

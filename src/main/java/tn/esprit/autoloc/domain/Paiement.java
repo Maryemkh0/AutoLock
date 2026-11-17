@@ -34,4 +34,8 @@ public class Paiement {
     @JoinColumn(name = "id_contrat")
     @JsonBackReference("contrat-paiements")
     private Contrat contrat;
+
+    public Long getId() {
+        return idPaiement;
+    }
 }
